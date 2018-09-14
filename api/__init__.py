@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_cors import  *
 from py2neo import Graph
-import setting
+import api.setting
 
 # 创建项目对象
 APP = Flask(__name__)
@@ -12,8 +12,8 @@ APP.config.from_envvar('FLASK_SETTING')
 #创建neo4j数据库对象
 DB = Graph(
         setting.DATABASE_URI,
-        setting.DATABASE_USER,
-        setting.DATABASE_PASSWORD
+        username=setting.DATABASE_USER,
+        password=setting.DATABASE_PASSWORD,
     )
 CORS(APP, suports_credential=True)
 
