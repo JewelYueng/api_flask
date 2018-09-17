@@ -1,6 +1,6 @@
 from api import APP, DB
 from flask import request, jsonify
-from py2neo import Graph, Node, Relationship, walk, NodeMatcher
+from py2neo import Graph, Node, Relationship, walk, NodeMatcher, RelationshipMatcher, RelationshipMatch
 
 @APP.route('/')
 def index():
@@ -42,14 +42,43 @@ def getRelations():
     end_type = request.args['end_type']
     rel_type = request.args['rel_type']
     results = []
-    if rel_type:
-        for re in DB.run("MATCH p=()-[r:%s]->() RETURN p" % rel_type).data():
-            w_re = walk(re)
+    r_matcher = RelationshipMatcher(DB)
+    if rel_type and not start_type and not start_node and not end_node and not end_type:
+        for re in r_matcher.match(r_type=rel_type):
             results.append({
-                'start_node': w_re.start_node,
-                'end_node': w_re.end_node,
-                'attr': w_re
+                'start_node': re.start_node['name'],
+                'end_node': re.end_node['name'],
+                'attr': dict(re)
             })
+        return jsonify(results)
+    elif start_node or end_node:
+        results = []
+        if rel_type:
+            matcher = RelationshipMatch(DB, r_type=rel_type)
+        else:
+            matcher = RelationshipMatch(DB)
+        if start_node and end_node:
+            for re in matcher.where('a.name="%s" AND b.name= "%s"' % (start_node, end_node)):
+                results.append({
+                    'start_node':re.start_node['name'],
+                    'end_node': re.end_node['name'],
+                    'attr': dict(re)
+                })
+        elif start_node and not end_node:
+            for re in matcher.where('a.name="%s"' % start_node):
+                results.append({
+                    'start_node':re.start_node['name'],
+                    'end_node': re.end_node['name'],
+                    'attr': dict(re)
+                })
+        elif end_node and not start_node:
+            for re in matcher.where('b.name= "%s"' % end_node):
+                results.append({
+                    'start_node':re.start_node['name'],
+                    'end_node': re.end_node['name'],
+                    'attr': dict(re)
+                })
+        return jsonify(results)
     else:
         return jsonify({
             'status': 'unfinished'
